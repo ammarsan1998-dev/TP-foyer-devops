@@ -1,9 +1,9 @@
-pipeline {
+ pipeline {
   agent any
 
   environment {
     DOCKER_IMAGE = "ammars2050/devopss"
-    DOCKER_CRED = "creds"
+    DOCKER_CRED  = "creds"
   }
 
   stages {
@@ -20,13 +20,18 @@ pipeline {
       steps {
         sh 'mvn -B -DskipTests=false clean package'
       }
-    } // Missing closing brace was here
+      post {
+        success {
+          archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+        }
+      }
+    }
 
     stage('Unit tests') {
       steps {
         sh 'mvn -B -DskipTests=false test'
       }
-    } // Unnecessary extra closing brace removed
+    }
 
     stage('Docker build') {
       steps {
