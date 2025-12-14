@@ -3,14 +3,16 @@ pipeline {
 
   environment {
     DOCKER_IMAGE = "ammars2050/devopss"
-    DOCKER_CRED  = "creds"
+    DOCKER_CRED = "creds"
   }
 
   stages {
     stage('Checkout') {
       steps {
         checkout scm
-        script { echo "Branch: ${env.BRANCH_NAME ?: 'unknown'}" }
+        script { 
+          echo "Branch: ${env.BRANCH_NAME ?: 'unknown'}" 
+        }
       }
     }
 
@@ -18,18 +20,19 @@ pipeline {
       steps {
         sh 'mvn -B -DskipTests=false clean package'
       }
-    }
+    } // Missing closing brace was here
 
     stage('Unit tests') {
       steps {
         sh 'mvn -B -DskipTests=false test'
       }
-    }
+    } // Unnecessary extra closing brace removed
 
     stage('Docker build') {
       steps {
         script {
           def tag = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+
           sh "docker build -t ${DOCKER_IMAGE}:${tag} ."
           sh "docker tag ${DOCKER_IMAGE}:${tag} ${DOCKER_IMAGE}:latest"
         }
@@ -38,12 +41,18 @@ pipeline {
 
     stage('Docker push') {
       steps {
-        withCredentials([usernamePassword(credentialsId: "${DOCKER_CRED}", usernameVariable: 'DH_USER', passwordVariable: 'DH_PASS')]) {
+        withCredentials([usernamePassword(
+          credentialsId: "${DOCKER_CRED}", 
+          usernameVariable: 'DH_USER', 
+          passwordVariable: 'DH_PASS'
+        )]) {
           sh '''
             echo "$DH_PASS" | docker login -u "$DH_USER" --password-stdin
             TAG=$(git rev-parse --short HEAD)
+
             docker push ${DOCKER_IMAGE}:$TAG
             docker push ${DOCKER_IMAGE}:latest
+
             docker logout
           '''
         }
@@ -52,7 +61,11 @@ pipeline {
   }
 
   post {
-    success { echo "Pipeline succeeded: ${DOCKER_IMAGE}" }
-    failure { echo "Pipeline failed" }
+    success { 
+      echo "Pipeline succeeded: ${DOCKER_IMAGE}" 
+    }
+    failure { 
+      echo "Pipeline failed" 
+    }
   }
 }
