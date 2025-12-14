@@ -18,23 +18,13 @@ pipeline {
       steps {
         sh 'mvn -B -DskipTests=false clean package'
       }
-      post {
-        success {
-          archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
-        }
-      }
-    }
+    
 
     stage('Unit tests') {
       steps {
         sh 'mvn -B -DskipTests=false test'
       }
-      post {
-        always {
-          junit 'target/surefire-reports/*.xml'
-        }
-      }
-    }
+     
 
       stage('Docker build') {
       steps {
