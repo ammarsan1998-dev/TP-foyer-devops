@@ -1,62 +1,58 @@
 pipeline {
-  agent any
+    agent any
 
-  environment {
-    DOCKER_IMAGE = "ammars2050/devopss"
-    DOCKER_CRED  = "creds"
-  }
-
-  stages {
-    stage('Checkout') {
-      steps {
-        checkout scm
-        script { echo "Branch: ${env.BRANCH_NAME ?: 'unknown'}" }
-      }
+    environment {
+        DOCKER_IMAGE = "ammars2050/devopss"
+        DOCKER_CRED  = "creds"
     }
 
-    stage('Clean + Build Maven') {
-      steps {
-        sh 'mvn -B -DskipTests=false clean package'
-      }
-    
-
-    stage('Unit tests') {
-      steps {
-        sh 'mvn -B -DskipTests=false test'
-      }
-     
-
-      stage('Docker build') {
-      steps {
-        script {
-          def tag = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
-
-          sh "docker build -t ${DOCKER_IMAGE}:${tag} ."
-          sh "docker tag ${DOCKER_IMAGE}:${tag} ${DOCKER_IMAGE}:latest"
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+                script { echo "Branch: ${env.BRANCH_NAME ?: 'unknown'}" }
+            }
         }
-      }
-    }
 
-    stage('Docker push') {
-      steps {
-        withCredentials([usernamePassword(credentialsId: "${DOCKER_CRED}", usernameVariable: 'DH_USER', passwordVariable: 'DH_PASS')]) {
-          sh '''
-            echo "$DH_PASS" | docker login -u "$DH_USER" --password-stdin
-            TAG=$(git rev-parse --short HEAD)
-
-            docker push ${DOCKER_IMAGE}:$TAG
-            docker push ${DOCKER_IMAGE}:latest
-
-            docker logout
-          '''
+        stage('Clean + Build Maven') {
+            steps {
+                sh 'mvn -B -DskipTests=false clean package'
+            }
         }
-      }
-    }
-  }
 
-  post {
-    success { echo "Pipeline succeeded: ${DOCKER_IMAGE}" }
-    failure { echo "Pipeline failed" }
-  }
+        stage('Unit tests') {
+            steps {
+                sh 'mvn -B -DskipTests=false test'
+            }
+        }
+
+        stage('Docker build') {
+            steps {
+                script {
+                    def tag = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                    sh "docker build -t ${DOCKER_IMAGE}:${tag} ."
+                    sh "docker tag ${DOCKER_IMAGE}:${tag} ${DOCKER_IMAGE}:latest"
+                }
+            }
+        }
+
+        stage('Docker push') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: "${DOCKER_CRED}", usernameVariable: 'DH_USER', passwordVariable: 'DH_PASS')]) {
+                    sh '''
+                        echo "$DH_PASS" | docker login -u "$DH_USER" --password-stdin
+                        TAG=$(git rev-parse --short HEAD)
+                        docker push ${DOCKER_IMAGE}:$TAG
+                        docker push ${DOCKER_IMAGE}:latest
+                        docker logout
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        success { echo "Pipeline succeeded: ${DOCKER_IMAGE}" }
+        failure { echo "Pipeline failed" }
+    }
 }
-
